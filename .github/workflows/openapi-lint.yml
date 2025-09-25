@@ -1,0 +1,27 @@
+name: OpenAPI Lint
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  spectral:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Spectral
+        run: npm install -g @stoplight/spectral
+
+      - name: Lint OpenAPI spec
+        run: spectral lint backend/docs/openapi.v1.yaml
+
+

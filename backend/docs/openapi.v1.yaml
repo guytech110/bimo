@@ -1,0 +1,181 @@
+openapi: 3.0.3
+info:
+  title: bimo API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8001
+paths:
+  /v1/health:
+    get:
+      summary: Health
+      responses:
+        "200": { description: OK }
+  /v1/ready:
+    get:
+      summary: Readiness
+      responses:
+        "200": { description: OK }
+  /v1/providers/catalog:
+    get:
+      summary: Provider catalog
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Provider' }
+  /v1/providers/connections:
+    get:
+      summary: Connected providers
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: per_page
+          schema: { type: integer, default: 50 }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Total-Count:
+              schema: { type: integer }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { type: object } }
+                  meta: { type: object }
+  /v1/providers/{provider_id}/status:
+    get:
+      summary: Provider connection status
+      parameters:
+        - in: path
+          name: provider_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  provider_id: { type: string }
+                  connected: { type: boolean }
+                  status: { type: string }
+                  connected_at: { type: string, format: date-time }
+  /v1/providers/{provider_id}/billing/usage:
+    get:
+      summary: Provider usage
+      parameters:
+        - in: path
+          name: provider_id
+          required: true
+          schema: { type: string, enum: [openai] }
+        - in: query
+          name: from
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          schema: { type: string, format: date }
+      responses:
+        "200": { description: OK }
+  /v1/admin/ingest/invoice:
+    post:
+      summary: Admin ingest invoice
+      parameters:
+        - in: header
+          name: X-Admin-Token
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                provider:
+                  type: string
+                invoice:
+                  type: object
+                  additionalProperties: true
+      responses:
+        "200": { description: OK }
+  /v1/providers/{provider_id}/connect:
+    post:
+      summary: Connect provider
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConnectProviderRequest' }
+      responses:
+        "201": { description: Created }
+        "409": { description: Conflict (duplicate idempotency key) }
+  /v1/spend/summary:
+    get:
+      summary: Spend summary
+      parameters:
+        - in: query
+          name: from
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          schema: { type: string, format: date }
+      responses:
+        "200": { description: OK }
+  /v1/spend/trends:
+    get:
+      summary: Spend trends
+      parameters:
+        - in: query
+          name: provider
+          schema: { type: string }
+        - in: query
+          name: from
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          schema: { type: string, format: date }
+      responses:
+        "200": { description: OK }
+components:
+  schemas:
+    Provider:
+      type: object
+      required: [id, name, category]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        category: { type: string, enum: [ai, cloud, saas] }
+        logo_url: { type: string }
+    ConnectProviderRequest:
+      type: object
+      required: [provider_id, method]
+      properties:
+        provider_id: { type: string }
+        method: { type: string, enum: [api_key, oauth] }
+        credentials:
+          type: object
+          additionalProperties: true
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details: { type: object }

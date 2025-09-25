@@ -1,0 +1,43 @@
+{
+  "version": "1.0.0",
+  "source": "./index.html",
+  "type": "module",
+  "name": "bimo-platform",
+  "description": "Unified API Spend Management Platform",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && npm run build:cli",
+    "build:cli": "cd ../bimo-backend && npm run build:cli && cp -R dist/cli ../cloudy-tile-40230298.figma.site_fwpawd/dist/cli"
+  },
+  "bin": {
+    "bimo": "dist/cli/index.js"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.2",
+    "@radix-ui/react-progress": "^1.1.0",
+    "@radix-ui/react-select": "^2.1.2",
+    "@radix-ui/react-slider": "^1.2.1",
+    "@radix-ui/react-slot": "^1.1.0",
+    "@radix-ui/react-switch": "^1.1.1",
+    "@radix-ui/react-tabs": "^1.1.1",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.453.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.8.1",
+    "recharts": "^2.12.7",
+    "tailwind-merge": "^2.5.4"
+  },
+  "devDependencies": {
+    "@types/react": "18.2.0",
+    "@types/react-dom": "18.2.0",
+    "@vitejs/plugin-react": "4.3.4",
+    "esbuild": "0.25.5",
+    "globals": "15.12.0",
+    "serve": "^14.2.5",
+    "tailwindcss": "3.4.16",
+    "typescript": "^5.6.3",
+    "vite": "6.3.5"
+  }
+}
