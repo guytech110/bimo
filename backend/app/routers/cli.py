@@ -27,8 +27,8 @@ class DevicePollResponse(BaseModel):
     access_token: Optional[str] = None
 
 @router.post("/device/start", response_model=DeviceStartResponse)
-def device_start(request: DeviceStartRequest):
-    """Start device authentication flow"""
+def device_start():
+    """Start device authentication flow. Accepts an empty POST body (device-start has no payload)."""
     device_code = str(uuid.uuid4())
     user_code = ''.join([str(i) for i in range(8)])  # Simple 8-digit code
     
