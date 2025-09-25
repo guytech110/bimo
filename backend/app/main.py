@@ -9,13 +9,14 @@ except Exception:
     # Fall back to empty placeholders if routers are missing during tests
     health = providers = spend = admin = None  # type: ignore
 
+import importlib
 import traceback as _trace
 
 # Import optional routers individually so a failure in one doesn't disable others
 def _import_router(name: str):
     try:
-        module = __import__(f".routers.{name}", globals(), locals(), [name])
-        return getattr(module, name)
+        module = importlib.import_module(f"app.routers.{name}")
+        return module
     except Exception as e:
         # Print stack to logs so deployment errors are visible in Render logs
         print(f">>> Failed to import router '{name}': {e}")
