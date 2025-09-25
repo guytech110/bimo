@@ -21,6 +21,11 @@ jobs:
       - name: Install CLI runtime deps
         run: npm --prefix ./dist/cli install
 
+      - name: Patch dist/cli package.json (set type:module)
+        run: |
+          # patch script is safe and exits 0 when dist/cli/package.json not present
+          node scripts/patch_dist_cli_package.cjs || true
+
       - name: Prepare service account (from secret)
         env:
           SA_JSON: ${{ secrets.SA_JSON }}
