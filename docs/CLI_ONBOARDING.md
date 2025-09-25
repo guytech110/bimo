@@ -122,4 +122,17 @@ CONN_ID=$(curl -s -H "Authorization: Bearer $TOKEN" $BIMO_GATEWAY/providers/conn
 curl -s -H "Authorization: Bearer $TOKEN" "$BIMO_GATEWAY/providers/${CONN_ID}/usage?days=30" | jq
 ```
 
+PowerShell examples (Windows)
+
+```powershell
+# Login (device flow)
+$bimoGateway = 'https://bimo-backend.onrender.com/v1'
+bimo login --gateway $bimoGateway
+
+# Read token and list connections
+$config = Get-Content "$env:USERPROFILE\.bimo\config.json" | ConvertFrom-Json
+$token = $config.token
+Invoke-RestMethod -Headers @{ Authorization = "Bearer $token" } -Uri "$bimoGateway/providers/connections"
+```
+
 

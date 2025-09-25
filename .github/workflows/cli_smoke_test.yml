@@ -1,0 +1,41 @@
+name: CLI smoke test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install CLI runtime deps
+        run: npm --prefix ./dist/cli install
+
+      - name: Prepare service account (from secret)
+        env:
+          SA_JSON: ${{ secrets.SA_JSON }}
+        run: |
+          if [ -z "${SA_JSON}" ]; then
+            echo "No SA_JSON secret provided; skipping smoke test" && exit 78
+          fi
+          echo "$SA_JSON" > /tmp/sa.json
+
+      - name: Run smoke test
+        env:
+          BIMO_GATEWAY: ${{ secrets.BIMO_GATEWAY }}
+          SA_PATH: /tmp/sa.json
+        run: |
+          chmod +x ./scripts/cli_smoke_test.sh
+          ./scripts/cli_smoke_test.sh
+
+
