@@ -9,10 +9,23 @@ except Exception:
     # Fall back to empty placeholders if routers are missing during tests
     health = providers = spend = admin = None  # type: ignore
 
-try:
-    from .routers import recommendations, cli, env, gateway
-except Exception:
-    recommendations = cli = env = gateway = None  # type: ignore
+import traceback as _trace
+
+# Import optional routers individually so a failure in one doesn't disable others
+def _import_router(name: str):
+    try:
+        module = __import__(f".routers.{name}", globals(), locals(), [name])
+        return getattr(module, name)
+    except Exception as e:
+        # Print stack to logs so deployment errors are visible in Render logs
+        print(f">>> Failed to import router '{name}': {e}")
+        print(_trace.format_exc())
+        return None
+
+recommendations = _import_router('recommendations')
+cli = _import_router('cli')
+env = _import_router('env')
+gateway = _import_router('gateway')
 from .db_sa import engine, Base
 import os
 
