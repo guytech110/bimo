@@ -1,0 +1,37 @@
+name: Publish CLI
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Build CLI
+        run: npm run build:cli
+
+      - name: Patch dist/cli package.json
+        run: node scripts/patch_dist_cli_package.cjs || true
+
+      - name: Publish to npm
+        run: |
+          cd dist/cli
+          npm publish --access public
+
+
+
