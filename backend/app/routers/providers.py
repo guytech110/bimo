@@ -651,8 +651,10 @@ def get_provider_usage(connection_id: int, days: int = 30, db: Session = Depends
             creds = {}
 
         service_account_json = (creds or {}).get('service_account_json')
-        project_id = (creds or {}).get('project_id') or conn.project_id
-        dataset_id = (creds or {}).get('bigquery_dataset_id') or conn.bigquery_dataset_id or 'billing_export'
+        # Use getattr defensively because older deployments may not have the
+        # optional columns on the ProviderConnection model yet.
+        project_id = (creds or {}).get('project_id') or getattr(conn, 'project_id', None)
+        dataset_id = (creds or {}).get('bigquery_dataset_id') or getattr(conn, 'bigquery_dataset_id', None) or 'billing_export'
 
         if service_account_json and project_id:
             try:
