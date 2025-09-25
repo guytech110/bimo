@@ -43,7 +43,9 @@ def device_start():
     return DeviceStartResponse(
         device_code=device_code,
         user_code=user_code,
-        verification_uri="/cli/device/verify",
+        # Return the full API-prefixed verification path so the CLI builds the
+        # correct verification URL when it strips the /v1 base.
+        verification_uri="/v1/cli/device/verify",
         expires_in=600,  # 10 minutes
         interval=3  # Poll every 3 seconds
     )
