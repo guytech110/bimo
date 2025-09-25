@@ -9,6 +9,13 @@ class ProviderConnection(SQLModel, table=True):
     encrypted_credentials: str
     status: str = "connected"
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    # Optional metadata persisted for provider connections
+    project_id: Optional[str] = None
+    billing_account_id: Optional[str] = None
+    bigquery_dataset_id: Optional[str] = None
+    connection_type: Optional[str] = None
+    connection_source: Optional[str] = None
+    display_name: Optional[str] = None
 
 
 class IdempotencyKey(SQLModel, table=True):
