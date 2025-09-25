@@ -339,14 +339,15 @@ def connect_provider(provider_id: str, body: ConnectProviderRequest, Idempotency
     print(">>> Refreshing connection record...")
     db.refresh(conn)
     print(f">>> Connection ID: {conn.id}")
-    # Determine source tag for background syncs and responses
-    source = 'dev' if (conn.connection_type or '').lower() == 'developer' else 'prod'
+    # Determine source tag for background syncs and responses (defensive)
+    _conn_type_val = getattr(conn, 'connection_type', None) or ''
+    source = 'dev' if str(_conn_type_val).lower() == 'developer' else 'prod'
     # Auto-generate display name if not set
     try:
         if not conn.display_name:
             # Convert provider_id to title-case name when possible
             provider_name = provider_id.title() if provider_id else 'Provider'
-            type_label = 'Production' if (conn.connection_type or 'production').lower() == 'production' else 'Developer'
+            type_label = 'Production' if str(getattr(conn, 'connection_type', None) or 'production').lower() == 'production' else 'Developer'
             conn.display_name = f"{provider_name} - {type_label} - {conn.id}"
             db.add(conn)
             db.commit()
@@ -355,7 +356,7 @@ def connect_provider(provider_id: str, body: ConnectProviderRequest, Idempotency
         pass
 
     print(">>> Preparing response...")
-    resp = {"connection_id": conn.id, "status": conn.status, "idempotency_key": Idempotency_Key, "connection_type": conn.connection_type, "connection_source": conn.connection_source, "display_name": conn.display_name}
+    resp = {"connection_id": conn.id, "status": conn.status, "idempotency_key": Idempotency_Key, "connection_type": getattr(conn, 'connection_type', None), "connection_source": getattr(conn, 'connection_source', None), "display_name": getattr(conn, 'display_name', None)}
     print(f">>> Response prepared: {resp}")
     
     # Save idempotent response and audit in the same transaction
