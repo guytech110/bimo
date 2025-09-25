@@ -18,8 +18,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install CLI runtime deps
-        run: npm --prefix ./dist/cli install
+      - name: Install CLI from npm
+        run: |
+          # Install published CLI package so smoke tests run against the published artifact.
+          # Attempt to install the package by name; falls back to latest if ref_name unavailable.
+          npm install -g bimo-cli || npm install -g bimo-cli@latest
 
       - name: Patch dist/cli package.json (set type:module)
         run: |
