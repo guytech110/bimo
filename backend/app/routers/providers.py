@@ -377,7 +377,8 @@ def connect_provider(provider_id: str, body: ConnectProviderRequest, Idempotency
     print(">>> Saving idempotent response and audit log...")
     try:
         save_idempotent_response(db, Idempotency_Key, json.dumps(resp))
-        db.add(AuditLog(actor="system", action="provider_connect", target=str(conn.id), detail=provider_id))
+        # Use AuditLog fields compatible with AuditLog model
+        db.add(AuditLog(actor="system", action="provider_connect", entity=str(conn.id), before=provider_id))
         db.commit()
         print(">>> Idempotent response and audit log saved successfully")
     except Exception as e:
@@ -716,13 +717,22 @@ def disconnect_provider(provider_id: str, db: Session = Depends(get_db)):
         # Idempotent: consider not-found as 200 with deleted=0
         return {"deleted": 0}
     deleted = 0
+    errors = []
     try:
         for it in items:
-            db.add(AuditLog(actor="system", action="provider_disconnect", target=str(it.id), detail=provider_id))
-            db.delete(it)
-            deleted += 1
-        db.commit()
-    except Exception:
+            try:
+                # Use AuditLog fields compatible with model
+                db.add(AuditLog(actor="system", action="provider_disconnect", entity=str(it.id), before=provider_id))
+                db.delete(it)
+                db.commit()
+                deleted += 1
+            except Exception as e:
+                # Log and continue deleting the rest; collect errors for reporting
+                db.rollback()
+                errors.append({"id": getattr(it, 'id', None), "error": str(e)})
+        if errors:
+            print(f">>> Some deletes failed: {errors}")
+    except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail="failed to disconnect provider")
-    return {"deleted": deleted}
+        raise HTTPException(status_code=500, detail=f"failed to disconnect provider: {e}")
+    return {"deleted": deleted, "errors": errors}
