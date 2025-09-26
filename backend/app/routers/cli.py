@@ -67,14 +67,18 @@ def device_poll(request: DevicePollRequest):
         device_data["status"] = "expired"
         return DevicePollResponse(status="expired")
     
-    # For demo purposes, auto-approve after 30 seconds
-    if time.time() - device_data["created_at"] > 30:
-        device_data["status"] = "approved"
-        device_data["access_token"] = f"demo-token-{uuid.uuid4()}"
-        return DevicePollResponse(
-            status="approved",
-            access_token=device_data["access_token"]
-        )
+    # In production, approval must come from an explicit verification step.
+    # Keep auto-approve in dev environments only to simplify local testing.
+    if True:
+        import os
+        if os.getenv("APP_ENV", "dev").lower() == "dev":
+            if time.time() - device_data["created_at"] > 30:
+                device_data["status"] = "approved"
+                device_data["access_token"] = f"demo-token-{uuid.uuid4()}"
+                return DevicePollResponse(
+                    status="approved",
+                    access_token=device_data["access_token"]
+                )
     
     return DevicePollResponse(status=device_data["status"])
 

@@ -171,10 +171,10 @@ def connect_provider(provider_id: str, body: ConnectProviderRequest, Idempotency
                 # project/billing required for BigQuery validation regardless of provider alias
                 if not project_id:
                     print(">>> Missing project_id - raising error")
-                    return {"error": "project_id is required when using service_account_json"}
+                    raise HTTPException(status_code=400, detail="project_id is required when using service_account_json")
                 if not billing_account_id:
                     print(">>> Missing billing_account_id - raising error")
-                    return {"error": "billing_account_id is required when using service_account_json"}
+                    raise HTTPException(status_code=400, detail="billing_account_id is required when using service_account_json")
 
                 print(">>> All required fields present, proceeding with BigQuery validation")
 
@@ -200,7 +200,7 @@ def connect_provider(provider_id: str, body: ConnectProviderRequest, Idempotency
                             pass
                 except ValueError as e:
                     print(f">>> Service account JSON validation failed: {e}")
-                    return {"error": str(e)}
+                    raise HTTPException(status_code=400, detail=str(e))
                 except Exception as e:
                     # Don't block connection creation just because runtime validation failed
                     print(f">>> Service account validation / BigQuery calls failed (non-fatal): {e}")
@@ -220,7 +220,7 @@ def connect_provider(provider_id: str, body: ConnectProviderRequest, Idempotency
             # Fallback to API key validation for basic connectivity
             if not api_key:
                 print(">>> No API key provided - raising error")
-                return {"error": "api_key or service_account_json is required for Gemini"}
+                raise HTTPException(status_code=400, detail="api_key or service_account_json is required for Gemini")
             print(f">>> Validating Gemini API key (length: {len(api_key) if api_key else 0})")
             headers = {"x-goog-api-key": api_key}
             try:
@@ -230,11 +230,11 @@ def connect_provider(provider_id: str, body: ConnectProviderRequest, Idempotency
                 print(f">>> Making request to Google Generative Language API... (after) - status: {r.status_code}")
                 if r.status_code != 200:
                     print(f">>> API key validation failed with status: {r.status_code}")
-                    return {"error": f"Gemini key validation failed: status {r.status_code}"}
+                    raise HTTPException(status_code=401, detail=f"Gemini key validation failed: status {r.status_code}")
                 print(">>> API key validation successful")
             except Exception as e:
                 print(f">>> API key validation request exception: {e}")
-                return {"error": str(e)}
+                raise HTTPException(status_code=400, detail=str(e))
     # Validation for Anthropic Claude: list models via Anthropic API
     elif provider_id.lower() == "claude":
         api_key = creds.get("api_key")
@@ -647,7 +647,11 @@ def list_models_for_connection(connection_id: int, x_admin_token: Optional[str] 
 
 @router.get("/{connection_id}/usage")
 def get_provider_usage(connection_id: int, days: int = 30, db: Session = Depends(get_db)):
-    """Return usage metrics for a provider connection. For Gemini this queries BigQuery billing export when configured."""
+    """Return usage metrics for a provider connection. For Gemini this queries BigQuery billing export when configured.
+
+    Always return a safe response shape even when BigQuery is unavailable or
+    credentials are missing, to keep CLI and dashboard flows resilient.
+    """
     conn = db.get(ProviderConnectionSA, connection_id)
     if not conn:
         raise HTTPException(status_code=404, detail="connection not found")
@@ -671,11 +675,21 @@ def get_provider_usage(connection_id: int, days: int = 30, db: Session = Depends
         project_id = (creds or {}).get('project_id') or getattr(conn, 'project_id', None)
         dataset_id = (creds or {}).get('bigquery_dataset_id') or getattr(conn, 'bigquery_dataset_id', None) or 'billing_export'
 
+        # Default safe response shape
+        safe_resp = {
+            'daily_spend': [],
+            'token_usage': {'total_tokens': 0, 'by_day': []},
+            'monthly_cost': 0.0,
+            'raw': [],
+            'source': source,
+        }
+
         if service_account_json and project_id:
             try:
                 from ..services.bigquery_service import BigQueryService
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"bigquery client not available: {e}")
+            except Exception:
+                # Client not available; return safe shape
+                return safe_resp
 
             try:
                 bq = BigQueryService(service_account_json, project_id)
@@ -683,19 +697,19 @@ def get_provider_usage(connection_id: int, days: int = 30, db: Session = Depends
                 token_usage = bq.get_token_usage(dataset_id=dataset_id, days=days)
                 monthly_cost = bq.get_monthly_cost(dataset_id=dataset_id)
                 raw = bq.get_raw_usage(dataset_id=dataset_id, days=days)
-                # Attach source label to the response as required by frontend contract
                 return {
-                    'daily_spend': daily_spend,
-                    'token_usage': token_usage,
-                    'monthly_cost': monthly_cost,
-                    'raw': raw,
+                    'daily_spend': daily_spend or [],
+                    'token_usage': token_usage or {'total_tokens': 0, 'by_day': []},
+                    'monthly_cost': monthly_cost or 0.0,
+                    'raw': raw or [],
                     'source': source,
                 }
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"failed to query bigquery: {e}")
+            except Exception:
+                # Any failures querying BigQuery should degrade gracefully
+                return safe_resp
 
-        # Fallback: no BigQuery configured
-        raise HTTPException(status_code=400, detail="no BigQuery billing credentials configured for this connection")
+        # Fallback: missing SA/project; return safe shape
+        return safe_resp
 
     else:
         # Generic placeholder: for supported providers implement provider-specific

@@ -19,13 +19,20 @@ class BigQueryService:
             # Lazy import to avoid forcing the dependency in dev where it's
             # not needed.
             from google.cloud import bigquery  # type: ignore
+            from google.oauth2 import service_account  # type: ignore
             import json
-            creds = json.loads(service_account_json) if isinstance(service_account_json, str) else service_account_json
-            # Use default credentials behavior when service account isn't used here
-            # for simplicity; constructing a client with credentials is possible
-            # but requires google.oauth2.service_account which we avoid in the
-            # minimal shim.
-            self._client = bigquery.Client(project=project_id)
+            sa_info = json.loads(service_account_json) if isinstance(service_account_json, str) else service_account_json
+            # Construct credentials explicitly from provided service account JSON
+            # and scope them to BigQuery read-only.
+            try:
+                creds = service_account.Credentials.from_service_account_info(
+                    sa_info,
+                    scopes=["https://www.googleapis.com/auth/bigquery.readonly"],
+                )
+                self._client = bigquery.Client(project=project_id, credentials=creds)
+            except Exception:
+                # As a fallback, attempt default client (useful in dev when SA not required)
+                self._client = bigquery.Client(project=project_id)
         except Exception:
             # If BigQuery client isn't available or fails to initialize, keep
             # _client as None and methods will return safe empty shapes.
@@ -73,5 +80,8 @@ class BigQueryService:
             return []
         sql = f"SELECT * FROM `{self.project_id}.{dataset_id}.gcp_billing_export_v1_*` WHERE DATE(usage_start_time) >= DATE_SUB(CURRENT_DATE(), INTERVAL {days} DAY) LIMIT 1000"
         return self._run_query(sql)
+
+
+
 
 

@@ -24,6 +24,9 @@ jobs:
           # Attempt to install the package by name; falls back to latest if ref_name unavailable.
           npm install -g bimo-cli || npm install -g bimo-cli@latest
 
+      - name: Add npm global bin to PATH
+        run: echo "PATH=$(npm config get prefix)/bin:$PATH" >> $GITHUB_ENV
+
       - name: Patch dist/cli package.json (set type:module)
         run: |
           # patch script is safe and exits 0 when dist/cli/package.json not present
