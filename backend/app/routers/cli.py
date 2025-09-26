@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from typing import Optional
 import uuid
@@ -83,6 +84,20 @@ def device_poll(request: DevicePollRequest):
     return DevicePollResponse(status=device_data["status"])
 
 @router.get("/device/verify")
-def device_verify():
-    """Device verification page (placeholder)"""
-    return {"message": "Device verification page - auto-approved for demo"}
+def device_verify(request: Request):
+    """HTTP redirect to dashboard signup with optional user_code.
+
+    The dashboard should read user_code from the query and complete the device
+    approval after signup/login. In dev, polling still auto-approves.
+    """
+    try:
+        from ..settings import settings
+    except Exception:
+        class _S: DASHBOARD_URL = "http://localhost:5173"
+        settings = _S()  # type: ignore
+    user_code = request.query_params.get("user_code") or ""
+    url = f"{settings.DASHBOARD_URL}/signup"
+    if user_code:
+        from urllib.parse import urlencode
+        url = f"{url}?{urlencode({'user_code': user_code})}"
+    return RedirectResponse(url, status_code=302)
