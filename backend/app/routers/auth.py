@@ -13,7 +13,14 @@ from ..auth import (
     get_current_user,
     decode_access_token,
 )
-from ..models import RefreshToken
+try:
+    from ..models import RefreshToken
+except Exception:
+    # In some deployment states the RefreshToken model/migration may not be
+    # present yet; avoid failing import-time so the auth router can still be
+    # registered. Endpoints that rely on RefreshToken will handle its absence
+    # at runtime.
+    RefreshToken = None
 import sqlalchemy as sa
 
 router = APIRouter(prefix="/auth", tags=["auth"])
