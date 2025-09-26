@@ -2,22 +2,35 @@ openapi: 3.0.3
 info:
   title: bimo API
   version: 1.0.0
+  description: API for managing provider connections and billing usage (used by the bimo CLI and dashboard)
 servers:
   - url: http://localhost:8001
 paths:
   /v1/health:
     get:
       summary: Health
+      description: Returns basic health status for the service.
+      operationId: getHealth
+      tags:
+        - health
       responses:
         "200": { description: OK }
   /v1/ready:
     get:
       summary: Readiness
+      description: Returns readiness status for the service (dependencies initialized).
+      operationId: getReady
+      tags:
+        - health
       responses:
         "200": { description: OK }
   /v1/providers/catalog:
     get:
       summary: Provider catalog
+      description: List available providers supported by the platform (e.g., Gemini, OpenAI).
+      operationId: getProviderCatalog
+      tags:
+        - providers
       responses:
         "200":
           description: OK
@@ -32,6 +45,10 @@ paths:
   /v1/providers/connections:
     get:
       summary: Connected providers
+      description: Return a paginated list of stored provider connections (redacted credentials).
+      operationId: listProviderConnections
+      tags:
+        - providers
       parameters:
         - in: query
           name: page
@@ -55,6 +72,10 @@ paths:
   /v1/providers/{provider_id}/status:
     get:
       summary: Provider connection status
+      description: Returns connection status for a given provider id (connected/last seen).
+      operationId: getProviderStatus
+      tags:
+        - providers
       parameters:
         - in: path
           name: provider_id
@@ -75,11 +96,15 @@ paths:
   /v1/providers/{provider_id}/billing/usage:
     get:
       summary: Provider usage
+      description: Retrieve billing/export usage for the provider connection over a date range.
+      operationId: getProviderBillingUsage
+      tags:
+        - providers
       parameters:
         - in: path
           name: provider_id
           required: true
-          schema: { type: string, enum: [openai] }
+          schema: { type: string }
         - in: query
           name: from
           schema: { type: string, format: date }
@@ -91,6 +116,10 @@ paths:
   /v1/admin/ingest/invoice:
     post:
       summary: Admin ingest invoice
+      description: Admin-only endpoint to ingest invoice/billing rows into the system.
+      operationId: adminIngestInvoice
+      tags:
+        - admin
       parameters:
         - in: header
           name: X-Admin-Token
@@ -136,6 +165,10 @@ paths:
   /v1/spend/summary:
     get:
       summary: Spend summary
+      description: Return aggregated spend summary for providers.
+      operationId: getSpendSummary
+      tags:
+        - spend
       parameters:
         - in: query
           name: from
@@ -148,6 +181,10 @@ paths:
   /v1/spend/trends:
     get:
       summary: Spend trends
+      description: Return time-series spend trends for a provider.
+      operationId: getSpendTrends
+      tags:
+        - spend
       parameters:
         - in: query
           name: provider
