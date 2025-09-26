@@ -112,7 +112,16 @@ paths:
   /v1/providers/{provider_id}/connect:
     post:
       summary: Connect provider
+      description: Create a new provider connection (supports API key or service-account credentials).
+      operationId: connectProvider
+      tags:
+        - providers
       parameters:
+        - in: path
+          name: provider_id
+          required: true
+          schema: { type: string }
+          description: Provider id (e.g. "gemini", "openai")
         - in: header
           name: Idempotency-Key
           schema: { type: string }
