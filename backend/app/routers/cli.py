@@ -28,6 +28,10 @@ class DevicePollResponse(BaseModel):
     status: str  # "pending", "approved", "expired"
     access_token: Optional[str] = None
 
+class DeviceApproveRequest(BaseModel):
+    user_code: Optional[str] = None
+    device_code: Optional[str] = None
+
 @router.post("/device/start", response_model=DeviceStartResponse)
 def device_start():
     """Start device authentication flow. Accepts an empty POST body (device-start has no payload)."""
@@ -82,6 +86,37 @@ def device_poll(request: DevicePollRequest):
                 )
     
     return DevicePollResponse(status=device_data["status"])
+
+@router.post("/device/approve")
+def device_approve(body: DeviceApproveRequest):
+    """Approve a pending device using user_code or device_code.
+
+    Intended to be called by the dashboard after a user signs up/logs in.
+    """
+    # Find by device_code first if provided
+    if body.device_code and body.device_code in device_codes:
+        entry = device_codes[body.device_code]
+        # Approve if not expired
+        if time.time() - entry["created_at"] > 600:
+            entry["status"] = "expired"
+            raise HTTPException(status_code=400, detail="device code expired")
+        entry["status"] = "approved"
+        entry["access_token"] = f"token-{uuid.uuid4()}"
+        return {"status": "approved"}
+
+    # Otherwise search by user_code
+    if body.user_code:
+        # linear scan small in-memory store; in prod use indexed storage
+        for dc, entry in device_codes.items():
+            if entry.get("user_code") == body.user_code:
+                if time.time() - entry["created_at"] > 600:
+                    entry["status"] = "expired"
+                    raise HTTPException(status_code=400, detail="device code expired")
+                entry["status"] = "approved"
+                entry["access_token"] = f"token-{uuid.uuid4()}"
+                return {"status": "approved"}
+
+    raise HTTPException(status_code=404, detail="device not found")
 
 @router.get("/device/verify")
 def device_verify(request: Request):
