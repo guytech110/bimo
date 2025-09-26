@@ -28,6 +28,16 @@ settings = Settings()
 # Helper: parse CORS origins into list for FastAPI
 def get_cors_origins() -> List[str]:
     raw = settings.CORS_ORIGINS
+    origins: List[str]
     if isinstance(raw, str):
-        return [o.strip() for o in raw.split(",") if o.strip()]
-    return raw
+        origins = [o.strip() for o in raw.split(",") if o.strip()]
+    else:
+        origins = list(raw)
+    # Always include DASHBOARD_URL host to prevent production CORS failures
+    try:
+        dash = settings.DASHBOARD_URL.strip()
+        if dash and dash not in origins:
+            origins.append(dash)
+    except Exception:
+        pass
+    return origins
