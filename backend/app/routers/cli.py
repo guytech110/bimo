@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Optional
 import uuid
 import time
+import random
 
 router = APIRouter(prefix="/cli", tags=["cli"])
 
@@ -30,7 +31,8 @@ class DevicePollResponse(BaseModel):
 def device_start():
     """Start device authentication flow. Accepts an empty POST body (device-start has no payload)."""
     device_code = str(uuid.uuid4())
-    user_code = ''.join([str(i) for i in range(8)])  # Simple 8-digit code
+    # Generate a random 8-digit numeric user code for device verification
+    user_code = ''.join(str(random.randint(0, 9)) for _ in range(8))
     
     # Store device code with metadata
     device_codes[device_code] = {

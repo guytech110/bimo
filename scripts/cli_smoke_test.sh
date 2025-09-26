@@ -14,6 +14,7 @@ bimo login --gateway $BIMO_GATEWAY
 
 echo "2) Connect Gemini (service account)"
 # Create a fresh connection for this smoke test to avoid selecting stale connections
+# Use file path (not upload) for service account; prefer file path to avoid upload issues
 bimo connect gemini --gateway $BIMO_GATEWAY --service-account-file "$SA_PATH" --smart-connect --key-type developer || true
 
 # After connecting, prefer the most recent connection that was created by the CLI
