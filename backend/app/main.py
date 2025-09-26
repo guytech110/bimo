@@ -28,6 +28,16 @@ cli = _import_router('cli')
 env = _import_router('env')
 gateway = _import_router('gateway')
 auth = _import_router('auth')
+# If the full auth router failed to import (e.g. missing optional deps in prod),
+# try to import a lightweight fallback router that provides /v1/auth endpoints
+# so the signup/login flows used by the dashboard can work until full auth is
+# restored. This keeps production available while we fix upstream issues.
+if auth is None:
+    try:
+        import importlib
+        auth = importlib.import_module('app.routers.auth_fallback')
+    except Exception:
+        auth = None
 from .db_sa import engine, Base
 import os
 
