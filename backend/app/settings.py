@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     REDIS_URL: str | None = None
     vite_api_base_url: str = "http://localhost:8001"
     # Public dashboard URL (used to construct device verification/signup links)
-    DASHBOARD_URL: str = "http://localhost:5173"
+    DASHBOARD_URL: str = "https://bimo-platform.vercel.app"
 
     class Config:
         env_file = ".env"

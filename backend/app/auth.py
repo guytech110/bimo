@@ -9,9 +9,12 @@ from sqlmodel import Session, select
 from .settings import settings
 from .models import User
 from .db_sa import get_db
+import hashlib
 
 # Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Use PBKDF2-SHA256 for password hashing to avoid bcrypt size limits and
+# provide a portable, dependency-light hashing scheme for local/dev.
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 # JWT settings
 SECRET_KEY = settings.SECRET_KEY
@@ -24,11 +27,19 @@ security = HTTPBearer()
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    # For PBKDF2 we can verify the plain password directly
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception:
+        return False
 
 
 def get_password_hash(password: str) -> str:
     """Hash a password."""
+    # Truncate password to 72 bytes max for bcrypt compatibility
+    if len(password.encode('utf-8')) > 72:
+        password = password[:72]
+    # Hash password using PBKDF2-SHA256
     return pwd_context.hash(password)
 
 
