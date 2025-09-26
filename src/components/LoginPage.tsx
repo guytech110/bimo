@@ -13,18 +13,20 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const showDemo = ((import.meta as any).env?.VITE_SHOW_DEMO as string) === 'true';
+  const isSignup = (typeof window !== 'undefined' && window.location && (window.location.pathname || '').toLowerCase().includes('signup'));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
-      // Try to login
-      const loginResult = await apiPost('/auth/login', { email, password });
+      // Choose endpoint based on mode
+      const path = isSignup ? '/auth/signup' : '/auth/login';
+      const result = await apiPost(path, { email, password });
       
-      if (loginResult.status === 200 && loginResult.body?.access_token) {
+      if (result.status === 200 && result.body?.access_token) {
         // Store token
-        localStorage.setItem('bimo:token', loginResult.body.access_token);
+        localStorage.setItem('bimo:token', result.body.access_token);
         
         // If this page was opened from CLI device flow, approve the device
         const params = new URLSearchParams(window.location.search);
@@ -36,15 +38,17 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         setIsLoading(false);
         onLogin();
       } else {
-        // Login failed
+        // Auth failed
         setIsLoading(false);
-        alert('Login failed. Please check your credentials.');
+        alert(isSignup ? 'Signup failed. Please try a different email or password.' : 'Login failed. Please check your credentials.');
       }
     } catch (err) {
       setIsLoading(false);
-      // If login fails with 401, user doesn't exist - offer to sign up
-      if (err?.response?.status === 401) {
-        alert('Invalid credentials. Please check your email and password.');
+      const status = (err as any)?.response?.status;
+      if (status === 401) {
+        alert(isSignup ? 'Signup unauthorized. Please try again.' : 'Invalid credentials. Please check your email and password.');
+      } else if (status === 400) {
+        alert(isSignup ? 'Email already registered. Try logging in instead.' : 'Bad request.');
       } else {
         alert('An error occurred. Please try again.');
       }
