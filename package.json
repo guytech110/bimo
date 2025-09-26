@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && npm run build:cli",
-    "build:cli": "cd ../bimo-backend && npm run build:cli && cp -R dist/cli ../cloudy-tile-40230298.figma.site_fwpawd/dist/cli"
+    "build:cli": "rm -rf dist/cli && mkdir -p dist/cli && cp -R packages/cli/dist dist/cli || (cd packages/cli && npm ci && npm run build && cp -R dist ../../dist/cli)"
   },
   "bin": {
     "bimo": "dist/cli/index.js"

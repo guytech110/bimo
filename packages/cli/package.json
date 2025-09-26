@@ -1,0 +1,19 @@
+{
+  "name": "bimo-cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "bimo": "index.js"
+  },
+  "scripts": {
+    "build": "mkdir -p dist && cp -R src dist && cp index.js dist/index.js && cp package.json dist/package.json && chmod +x dist/index.js"
+  },
+  "dependencies": {
+    "axios": "^1.12.2",
+    "commander": "^14.0.1",
+    "open": "^10.2.0",
+    "uuid": "^13.0.0"
+  }
+}
+
+

@@ -32,6 +32,9 @@ jobs:
             npm --prefix ./dist/cli install --production
           else
             echo "dist/cli not present — running repo build:cli"
+            # Ensure the build script does not rely on ../bimo-backend and is
+            # runnable in CI. If the CLI source lives in another repo, consider
+            # checking it out here or moving the CLI source into this repo.
             npm run build:cli
           fi
 
