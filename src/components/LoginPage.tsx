@@ -12,6 +12,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const showDemo = ((import.meta as any).env?.VITE_SHOW_DEMO as string) === 'true';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +67,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           </div>
 
           {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
             {/* Email Field */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -81,6 +82,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email"
                   required
+                  autoComplete="email"
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 />
               </div>
@@ -100,6 +102,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
                   required
+                  autoComplete="current-password"
                   className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 />
                 <button
@@ -197,50 +200,36 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
-              <button
-                type="button"
-                onClick={async () => {
-                  // For now, use the demo credentials to signup
-                  setEmail('demo@bimo.com');
-                  setPassword('demo123');
-                  try {
-                    const signupResult = await apiPost('/auth/signup', { 
-                      email: 'demo@bimo.com', 
-                      password: 'demo123' 
-                    });
-                    if (signupResult.status === 200) {
-                      alert('Account created! You can now login.');
-                    }
-                  } catch (err) {
-                    // User might already exist
-                    console.log('Signup error:', err);
-                  }
-                }}
-                className="text-teal-600 hover:text-teal-800 font-medium"
-              >
-                Sign up for free
-              </button>
+              <a href="/signup" className="text-teal-600 hover:text-teal-800 font-medium">Sign up for free</a>
             </p>
           </div>
-
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h4 className="text-sm font-medium text-blue-800 mb-2">Demo Credentials</h4>
-            <div className="text-sm text-blue-700 space-y-1">
-              <p><strong>Email:</strong> demo@bimo.com</p>
-              <p><strong>Password:</strong> demo123</p>
+          {/* If opened from CLI with a user_code, show guidance */}
+          {new URLSearchParams(window.location.search).get('user_code') ? (
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+              <p className="text-sm text-yellow-800">You opened this page from the bimo CLI. After signing up or logging in, your CLI will be automatically approved and connected.</p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('demo@bimo.com');
-                setPassword('demo123');
-              }}
-              className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
-            >
-              Use demo credentials
-            </button>
-          </div>
+          ) : null}
+
+          {/* Demo Credentials (opt-in via VITE_SHOW_DEMO=true) */}
+          {showDemo ? (
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h4 className="text-sm font-medium text-blue-800 mb-2">Demo Credentials</h4>
+              <div className="text-sm text-blue-700 space-y-1">
+                <p><strong>Email:</strong> demo@bimo.com</p>
+                <p><strong>Password:</strong> demo123</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('demo@bimo.com');
+                  setPassword('demo123');
+                }}
+                className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Use demo credentials
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
