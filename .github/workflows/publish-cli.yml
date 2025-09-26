@@ -28,6 +28,8 @@ jobs:
           cd packages/cli
           npm ci
           npm run build
+          # ensure destination exists before copying
+          mkdir -p ../../dist/cli
           cp -R dist ../../dist/cli
 
       - name: Patch dist/cli package.json
