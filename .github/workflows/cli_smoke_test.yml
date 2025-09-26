@@ -42,6 +42,7 @@ jobs:
         env:
           BIMO_GATEWAY: ${{ secrets.BIMO_GATEWAY }}
           SA_PATH: /tmp/sa.json
+          SMOKE_CLEANUP: 'true'
         run: |
           chmod +x ./scripts/cli_smoke_test.sh
           ./scripts/cli_smoke_test.sh
