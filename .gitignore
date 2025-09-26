@@ -1,3 +1,16 @@
+# Python venv and caches
+backend/.venv/
+**/__pycache__/
+*.py[cod]
+
+# Local databases and dumps
+backend/bimo.db
+backend/bimo.db.backup
+backend/bimo_dump.sql
+
+# Node
+**/node_modules/
+
 # Logs
 logs
 *.log

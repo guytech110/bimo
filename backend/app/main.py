@@ -146,8 +146,8 @@ def on_startup():
     from pathlib import Path
     
     try:
-        # Run alembic upgrade head
-        backend_dir = Path(__file__).resolve().parents[2]
+        # Run alembic upgrade head from the backend directory where alembic.ini lives
+        backend_dir = Path(__file__).resolve().parents[1]
         result = subprocess.run(
             [sys.executable, "-m", "alembic", "upgrade", "head"],
             cwd=backend_dir,

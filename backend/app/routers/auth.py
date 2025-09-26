@@ -96,15 +96,20 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
     access_token = create_access_token(
         data={"sub": str(user.id)}, expires_delta=access_token_expires
     )
-    # Create a simple refresh token (for demo purposes store as JWT with longer expiry)
-    refresh_token = create_access_token(
-        data={"sub": str(user.id), "rt": True},
-        expires_delta=timedelta(days=30)
-    )
-    # Persist refresh token for revocation support
-    rt = RefreshToken(token=refresh_token, user_id=user.id, revoked=False)
-    db.add(rt)
-    db.commit()
+    # Create refresh token and persist when model/table is available
+    refresh_token: str | None = None
+    try:
+        refresh_token = create_access_token(
+            data={"sub": str(user.id), "rt": True},
+            expires_delta=timedelta(days=30)
+        )
+        if RefreshToken is not None:
+            rt = RefreshToken(token=refresh_token, user_id=user.id, revoked=False)
+            db.add(rt)
+            db.commit()
+    except Exception:
+        # If table missing or other transient error, proceed with access token only
+        refresh_token = None
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 
@@ -122,10 +127,11 @@ def refresh_token(body: RefreshRequest, db: Session = Depends(get_db)):
     user = db.get(User, int(user_id))
     if not user:
         raise HTTPException(status_code=404, detail='user not found')
-    # Check refresh token persisted and not revoked
-    rt = db.exec(select(RefreshToken).where(RefreshToken.token == body.refresh_token)).first()
-    if not rt or rt.revoked:
-        raise HTTPException(status_code=401, detail='refresh token revoked or not found')
+    # Check refresh token persisted and not revoked when model available
+    if RefreshToken is not None:
+        rt = db.exec(select(RefreshToken).where(RefreshToken.token == body.refresh_token)).first()
+        if not rt or rt.revoked:
+            raise HTTPException(status_code=401, detail='refresh token revoked or not found')
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=access_token_expires)
     return TokenResponse(access_token=access_token, refresh_token=body.refresh_token)
