@@ -22,21 +22,13 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Build CLI
+      - name: Build CLI (packages/cli)
         run: |
-          # If a dist/cli package.json exists in the workspace, install its
-          # runtime deps and use that artifact. Otherwise fall back to the
-          # repository build script (legacy behavior).
-          if [ -f "./dist/cli/package.json" ]; then
-            echo "Found dist/cli/package.json — installing runtime deps"
-            npm --prefix ./dist/cli install --production
-          else
-            echo "dist/cli not present — running repo build:cli"
-            # Ensure the build script does not rely on ../bimo-backend and is
-            # runnable in CI. If the CLI source lives in another repo, consider
-            # checking it out here or moving the CLI source into this repo.
-            npm run build:cli
-          fi
+          echo "Building CLI from packages/cli"
+          cd packages/cli
+          npm ci
+          npm run build
+          cp -R dist ../../dist/cli
 
       - name: Patch dist/cli package.json
         run: node scripts/patch_dist_cli_package.cjs || true
