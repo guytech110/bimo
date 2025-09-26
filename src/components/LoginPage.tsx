@@ -17,22 +17,37 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate login process
-    await new Promise(r => setTimeout(r, 1500));
-
-    // If this page was opened from CLI device flow, approve the device
     try {
-      const params = new URLSearchParams(window.location.search);
-      const userCode = params.get('user_code');
-      if (userCode) {
-        await apiPost('/cli/device/approve', { user_code: userCode });
+      // Try to login
+      const loginResult = await apiPost('/auth/login', { email, password });
+      
+      if (loginResult.status === 200 && loginResult.body?.access_token) {
+        // Store token
+        localStorage.setItem('bimo:token', loginResult.body.access_token);
+        
+        // If this page was opened from CLI device flow, approve the device
+        const params = new URLSearchParams(window.location.search);
+        const userCode = params.get('user_code');
+        if (userCode) {
+          await apiPost('/cli/device/approve', { user_code: userCode });
+        }
+        
+        setIsLoading(false);
+        onLogin();
+      } else {
+        // Login failed
+        setIsLoading(false);
+        alert('Login failed. Please check your credentials.');
       }
     } catch (err) {
-      // Non-fatal: allow login to proceed even if approval call fails
+      setIsLoading(false);
+      // If login fails with 401, user doesn't exist - offer to sign up
+      if (err?.response?.status === 401) {
+        alert('Invalid credentials. Please check your email and password.');
+      } else {
+        alert('An error occurred. Please try again.');
+      }
     }
-
-    setIsLoading(false);
-    onLogin();
   };
 
   return (
@@ -184,6 +199,23 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               Don't have an account?{' '}
               <button
                 type="button"
+                onClick={async () => {
+                  // For now, use the demo credentials to signup
+                  setEmail('demo@bimo.com');
+                  setPassword('demo123');
+                  try {
+                    const signupResult = await apiPost('/auth/signup', { 
+                      email: 'demo@bimo.com', 
+                      password: 'demo123' 
+                    });
+                    if (signupResult.status === 200) {
+                      alert('Account created! You can now login.');
+                    }
+                  } catch (err) {
+                    // User might already exist
+                    console.log('Signup error:', err);
+                  }
+                }}
                 className="text-teal-600 hover:text-teal-800 font-medium"
               >
                 Sign up for free

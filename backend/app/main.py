@@ -27,6 +27,7 @@ recommendations = _import_router('recommendations')
 cli = _import_router('cli')
 env = _import_router('env')
 gateway = _import_router('gateway')
+auth = _import_router('auth')
 from .db_sa import engine, Base
 import os
 
@@ -123,6 +124,8 @@ if env is not None:
     app.include_router(env.router, prefix="/v1")
 if gateway is not None:
     app.include_router(gateway.router, prefix="/v1")
+if auth is not None:
+    app.include_router(auth.router, prefix="/v1")
 
 
 @app.on_event("startup")

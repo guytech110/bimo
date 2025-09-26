@@ -17,3 +17,7 @@ psutil==5.9.8
 google-cloud-bigquery==3.11.4
 google-cloud-monitoring==2.15.1
 google-auth==2.23.4
+google-cloud-bigquery-storage==2.21.0
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.9

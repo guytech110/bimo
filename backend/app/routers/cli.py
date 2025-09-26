@@ -1,15 +1,19 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from typing import Optional
+from sqlmodel import Session
 import uuid
 import time
 import random
+from datetime import datetime, timedelta
+from ..models import DeviceToken, User
+from ..db_sa import get_db
+from ..auth import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 
 router = APIRouter(prefix="/cli", tags=["cli"])
 
-# In-memory store for device codes (in production, use Redis or database)
-device_codes = {}
+# Note: We now persist device tokens in the database
 
 class DeviceStartRequest(BaseModel):
     pass
@@ -33,19 +37,22 @@ class DeviceApproveRequest(BaseModel):
     device_code: Optional[str] = None
 
 @router.post("/device/start", response_model=DeviceStartResponse)
-def device_start():
+def device_start(db: Session = Depends(get_db)):
     """Start device authentication flow. Accepts an empty POST body (device-start has no payload)."""
     device_code = str(uuid.uuid4())
     # Generate a random 8-digit numeric user code for device verification
     user_code = ''.join(str(random.randint(0, 9)) for _ in range(8))
     
-    # Store device code with metadata
-    device_codes[device_code] = {
-        "status": "pending",
-        "user_code": user_code,
-        "created_at": time.time(),
-        "access_token": None
-    }
+    # Store device token in database
+    expires_at = datetime.utcnow() + timedelta(minutes=10)
+    device_token = DeviceToken(
+        device_code=device_code,
+        user_code=user_code,
+        status="pending",
+        expires_at=expires_at
+    )
+    db.add(device_token)
+    db.commit()
     
     return DeviceStartResponse(
         device_code=device_code,
@@ -58,65 +65,118 @@ def device_start():
     )
 
 @router.post("/device/poll", response_model=DevicePollResponse)
-def device_poll(request: DevicePollRequest):
+def device_poll(request: DevicePollRequest, db: Session = Depends(get_db)):
     """Poll for device authentication status"""
     device_code = request.device_code
     
-    if device_code not in device_codes:
+    # Fetch from database
+    device_token = db.query(DeviceToken).filter(
+        DeviceToken.device_code == device_code
+    ).first()
+    
+    if not device_token:
         raise HTTPException(status_code=404, detail="Device code not found")
     
-    device_data = device_codes[device_code]
-    
-    # Check if expired (10 minutes)
-    if time.time() - device_data["created_at"] > 600:
-        device_data["status"] = "expired"
+    # Check if expired
+    if datetime.utcnow() > device_token.expires_at:
+        device_token.status = "expired"
+        db.commit()
         return DevicePollResponse(status="expired")
     
     # In production, approval must come from an explicit verification step.
     # Keep auto-approve in dev environments only to simplify local testing.
-    if True:
-        import os
-        if os.getenv("APP_ENV", "dev").lower() == "dev":
-            if time.time() - device_data["created_at"] > 30:
-                device_data["status"] = "approved"
-                device_data["access_token"] = f"demo-token-{uuid.uuid4()}"
-                return DevicePollResponse(
-                    status="approved",
-                    access_token=device_data["access_token"]
+    import os
+    if os.getenv("APP_ENV", "dev").lower() == "dev":
+        time_elapsed = (datetime.utcnow() - device_token.created_at).total_seconds()
+        if time_elapsed > 30 and device_token.status == "pending":
+            # Auto-approve for dev - create a test user if needed
+            test_user = db.query(User).filter(User.email == "dev@bimo.com").first()
+            if not test_user:
+                from ..auth import get_password_hash
+                test_user = User(
+                    email="dev@bimo.com",
+                    hashed_password=get_password_hash("dev123")
                 )
+                db.add(test_user)
+                db.commit()
+                db.refresh(test_user)
+            
+            # Create JWT token
+            access_token = create_access_token(
+                data={"sub": str(test_user.id)},
+                expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+            )
+            
+            device_token.status = "approved"
+            device_token.user_id = test_user.id
+            device_token.access_token = access_token
+            db.commit()
+            
+            return DevicePollResponse(
+                status="approved",
+                access_token=access_token
+            )
     
-    return DevicePollResponse(status=device_data["status"])
+    return DevicePollResponse(
+        status=device_token.status,
+        access_token=device_token.access_token
+    )
 
 @router.post("/device/approve")
-def device_approve(body: DeviceApproveRequest):
+def device_approve(body: DeviceApproveRequest, db: Session = Depends(get_db)):
     """Approve a pending device using user_code or device_code.
 
     Intended to be called by the dashboard after a user signs up/logs in.
+    This should include the user's JWT token to associate the device with the user.
     """
-    # Find by device_code first if provided
-    if body.device_code and body.device_code in device_codes:
-        entry = device_codes[body.device_code]
-        # Approve if not expired
-        if time.time() - entry["created_at"] > 600:
-            entry["status"] = "expired"
-            raise HTTPException(status_code=400, detail="device code expired")
-        entry["status"] = "approved"
-        entry["access_token"] = f"token-{uuid.uuid4()}"
-        return {"status": "approved"}
-
-    # Otherwise search by user_code
-    if body.user_code:
-        # linear scan small in-memory store; in prod use indexed storage
-        for dc, entry in device_codes.items():
-            if entry.get("user_code") == body.user_code:
-                if time.time() - entry["created_at"] > 600:
-                    entry["status"] = "expired"
-                    raise HTTPException(status_code=400, detail="device code expired")
-                entry["status"] = "approved"
-                entry["access_token"] = f"token-{uuid.uuid4()}"
-                return {"status": "approved"}
-
-    raise HTTPException(status_code=404, detail="device not found")
+    # Find device token
+    device_token = None
+    
+    if body.device_code:
+        device_token = db.query(DeviceToken).filter(
+            DeviceToken.device_code == body.device_code
+        ).first()
+    elif body.user_code:
+        device_token = db.query(DeviceToken).filter(
+            DeviceToken.user_code == body.user_code
+        ).first()
+    
+    if not device_token:
+        raise HTTPException(status_code=404, detail="device not found")
+    
+    # Check if expired
+    if datetime.utcnow() > device_token.expires_at:
+        device_token.status = "expired"
+        db.commit()
+        raise HTTPException(status_code=400, detail="device code expired")
+    
+    # For now, create a temporary user for the device
+    # In production, this should be called with the authenticated user's context
+    temp_email = f"cli-user-{device_token.user_code}@bimo.com"
+    user = db.query(User).filter(User.email == temp_email).first()
+    if not user:
+        from ..auth import get_password_hash
+        user = User(
+            email=temp_email,
+            hashed_password=get_password_hash(str(uuid.uuid4()))
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    
+    # Create JWT token for the user
+    access_token = create_access_token(
+        data={"sub": str(user.id)},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    
+    # Update device token
+    device_token.status = "approved"
+    device_token.user_id = user.id
+    device_token.access_token = access_token
+    db.commit()
+    
+    return {"status": "approved", "access_token": access_token}
 
 @router.get("/device/verify")
 def device_verify(request: Request):

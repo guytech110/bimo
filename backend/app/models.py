@@ -16,6 +16,8 @@ class ProviderConnection(SQLModel, table=True):
     connection_type: Optional[str] = None
     connection_source: Optional[str] = None
     display_name: Optional[str] = None
+    # User association
+    user_id: Optional[int] = Field(default=None, foreign_key="user.id")
 
 
 class IdempotencyKey(SQLModel, table=True):
@@ -70,3 +72,26 @@ class ApiKey(SQLModel, table=True):
     role: str = "analyst"
     rate_limit: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class User(SQLModel, table=True):
+    """User accounts for authentication and authorization."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    email: str = Field(unique=True, index=True)
+    hashed_password: str
+    is_active: bool = True
+    is_admin: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class DeviceToken(SQLModel, table=True):
+    """Persisted device tokens for CLI authentication."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    device_code: str = Field(unique=True, index=True)
+    user_code: str = Field(index=True)
+    user_id: Optional[int] = Field(default=None, foreign_key="user.id")
+    status: str = "pending"  # pending, approved, expired
+    access_token: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    expires_at: datetime
