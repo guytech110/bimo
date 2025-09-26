@@ -14,6 +14,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const showDemo = ((import.meta as any).env?.VITE_SHOW_DEMO as string) === 'true';
   const isSignup = (typeof window !== 'undefined' && window.location && (window.location.pathname || '').toLowerCase().includes('signup'));
+  const submitLabel = isSignup ? 'Sign up' : 'Sign in';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,8 +67,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
               </svg>
             </div>
-            <h1 className="text-2xl font-semibold text-gray-900 mb-2">Welcome back to bimo</h1>
-            <p className="text-gray-600">Sign in to your account to continue</p>
+            <h1 className="text-2xl font-semibold text-gray-900 mb-2">{isSignup ? 'Create your bimo account' : 'Welcome back to bimo'}</h1>
+            <p className="text-gray-600">{isSignup ? 'Sign up to get started' : 'Sign in to your account to continue'}</p>
           </div>
 
           {/* Login Form */}
@@ -154,10 +155,10 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Signing in...
+                  {isSignup ? 'Creating account...' : 'Signing in...'}
                 </>
               ) : (
-                'Sign in'
+                submitLabel
               )}
             </button>
           </form>
@@ -200,12 +201,19 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             </button>
           </div>
 
-          {/* Sign Up Link */}
+          {/* Auth mode toggle link */}
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <a href="/signup" className="text-teal-600 hover:text-teal-800 font-medium">Sign up for free</a>
-            </p>
+            {isSignup ? (
+              <p className="text-sm text-gray-600">
+                Already have an account?{' '}
+                <a href="/" className="text-teal-600 hover:text-teal-800 font-medium">Sign in</a>
+              </p>
+            ) : (
+              <p className="text-sm text-gray-600">
+                Don't have an account?{' '}
+                <a href="/signup" className="text-teal-600 hover:text-teal-800 font-medium">Sign up for free</a>
+              </p>
+            )}
           </div>
           {/* If opened from CLI with a user_code, show guidance */}
           {new URLSearchParams(window.location.search).get('user_code') ? (
