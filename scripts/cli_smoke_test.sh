@@ -38,6 +38,14 @@ fi
 echo "3) Fetch usage for connection $CONN_ID"
 curl -s -H "Authorization: Bearer $TOKEN" "$BIMO_GATEWAY/providers/${CONN_ID}/usage?days=30" | jq
 
+# Optional cleanup: delete test connections created by this smoke run
+# Set SMOKE_CLEANUP=true to enable deletion (CI can enable this safely)
+if [ "${SMOKE_CLEANUP:-false}" = "true" ]; then
+  echo "4) Cleaning up test connections (SMOKE_CLEANUP=true)"
+  # This deletes all Gemini connections; enable only in test CI environments.
+  curl -s -X DELETE -H "Authorization: Bearer $TOKEN" "$BIMO_GATEWAY/providers/gemini/disconnect" | jq
+fi
+
 echo "Smoke test complete"
 
 
