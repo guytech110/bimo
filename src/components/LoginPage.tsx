@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { apiPost } from '../lib/utils';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 
 interface LoginPageProps {
@@ -17,10 +18,21 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     setIsLoading(true);
     
     // Simulate login process
-    setTimeout(() => {
-      setIsLoading(false);
-      onLogin();
-    }, 1500);
+    await new Promise(r => setTimeout(r, 1500));
+
+    // If this page was opened from CLI device flow, approve the device
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const userCode = params.get('user_code');
+      if (userCode) {
+        await apiPost('/cli/device/approve', { user_code: userCode });
+      }
+    } catch (err) {
+      // Non-fatal: allow login to proceed even if approval call fails
+    }
+
+    setIsLoading(false);
+    onLogin();
   };
 
   return (
