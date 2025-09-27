@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     vite_api_base_url: str = "http://localhost:8001"
     # Public dashboard URL (used to construct device verification/signup links)
     DASHBOARD_URL: str = "https://bimo-platform.vercel.app"
+    # Monitoring
+    SENTRY_DSN: str | None = None
+    ENABLE_PROMETHEUS: bool = True
 
     class Config:
         env_file = ".env"

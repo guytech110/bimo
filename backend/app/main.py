@@ -2,6 +2,22 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from .settings import settings, get_cors_origins
 
+# Initialize Sentry for error tracking
+if settings.SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+    
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        integrations=[
+            FastApiIntegration(auto_enabling_integrations=False),
+            SqlalchemyIntegration(),
+        ],
+        traces_sample_rate=0.1,
+        environment=settings.APP_ENV,
+    )
+
 # Import routers that exist; some are optional in this trimmed repo
 try:
     from .routers import health, providers, spend, admin
@@ -222,17 +238,31 @@ async def _gateway_logging_middleware(request: Request, call_next):
         pass
 
     # Record Prometheus metrics safely (no-op if prometheus_client not installed)
-    try:
-        from prometheus_client import Counter, Histogram
-        _c = Counter('bimo_usage_requests_total', 'Total usage requests', ['path', 'method', 'source', 'status'])
-        _h = Histogram('bimo_usage_request_latency_ms', 'Request latency ms', ['path', 'method', 'source'])
-        _c.labels(path=path, method=request.method, source=source, status=str(status)).inc()
-        _h.labels(path=path, method=request.method, source=source).observe(float(elapsed_ms))
-    except Exception:
-        pass
+    if settings.ENABLE_PROMETHEUS:
+        try:
+            from prometheus_client import Counter, Histogram
+            _c = Counter('bimo_usage_requests_total', 'Total usage requests', ['path', 'method', 'source', 'status'])
+            _h = Histogram('bimo_usage_request_latency_ms', 'Request latency ms', ['path', 'method', 'source'])
+            _c.labels(path=path, method=request.method, source=source, status=str(status)).inc()
+            _h.labels(path=path, method=request.method, source=source).observe(float(elapsed_ms))
+        except Exception:
+            pass
 
     return response
 
 @app.get("/")
 async def root():
     return {"service": "bimo-api", "version": "1.0.0"}
+
+@app.get("/metrics")
+async def metrics():
+    """Prometheus metrics endpoint"""
+    if not settings.ENABLE_PROMETHEUS:
+        return {"error": "Prometheus metrics disabled"}
+    
+    try:
+        from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+        from fastapi.responses import Response
+        return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+    except Exception:
+        return {"error": "Prometheus not available"}
