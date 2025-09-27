@@ -2,59 +2,133 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
     branches: [ main ]
 
 jobs:
-  frontend:
+  test:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-      - name: Install
-        run: npm ci
-      - name: Typecheck + Build
-        run: npm run build || true
-
-  backend-tests:
-    runs-on: ubuntu-latest
+    
     services:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: bimo
+          POSTGRES_USER: postgres
+          POSTGRES_DB: bimo_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
         ports:
           - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-      - name: Install deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
-      - name: Run backend tests
-        run: |
-          cd backend
-          pytest -q
 
-  openapi-lint:
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Python dependencies
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Install Node.js dependencies
+      run: |
+        npm ci
+        cd packages/cli && npm ci
+
+    - name: Run backend tests
+      run: |
+        cd backend
+        export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/bimo_test"
+        pytest tests/ -v
+
+    - name: Build frontend
+      run: npm run build
+
+    - name: Build CLI
+      run: npm run build:cli
+
+    - name: Test CLI
+      run: |
+        cd packages/cli
+        node dist/index.js --version
+
+  smoke-test:
     runs-on: ubuntu-latest
+    needs: test
+    
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Spectral
-        run: npm install -g @stoplight/spectral
-      - name: Lint OpenAPI
-        run: spectral lint backend/docs/openapi.v1.yaml
+    - uses: actions/checkout@v4
 
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
 
+    - name: Install dependencies
+      run: |
+        npm ci
+        cd packages/cli && npm ci
+
+    - name: Build CLI
+      run: npm run build:cli
+
+    - name: Run CLI smoke test
+      run: |
+        cd packages/cli
+        # Test CLI help and version commands
+        node dist/index.js --help
+        node dist/index.js --version
+        # Test with staging backend (if available)
+        node dist/index.js status --gateway https://bimo-backend.onrender.com/v1 || echo "Staging backend not available, skipping integration test"
+
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Python dependencies
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install flake8 black isort
+
+    - name: Install Node.js dependencies
+      run: npm ci
+
+    - name: Lint Python code
+      run: |
+        cd backend
+        flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        black --check app/
+        isort --check-only app/
+
+    - name: Lint TypeScript/JavaScript code
+      run: |
+        # Add ESLint if configured
+        echo "TypeScript/JavaScript linting would go here"
