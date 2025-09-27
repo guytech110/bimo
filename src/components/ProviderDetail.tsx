@@ -24,9 +24,9 @@ export default function ProviderDetail({ providerId, onBack }: ProviderDetailPro
     let mounted = true
     async function load() {
       try {
-        const catRes = await fetch(`${API_BASE || (window as any).__API_BASE__ || ''}/v1/providers/catalog`)
+        const catRes = await fetch(`${API_BASE || (window as any).__API_BASE__ || ''}/providers/catalog`)
         const catJson = catRes.ok ? await catRes.json() : []
-        const conRes = await fetch(`${API_BASE || (window as any).__API_BASE__ || ''}/v1/providers/connections`)
+        const conRes = await fetch(`${API_BASE || (window as any).__API_BASE__ || ''}/providers/connections`)
         const conJson = conRes.ok ? await conRes.json() : { data: [] }
         if (!mounted) return
         setCatalog(Array.isArray(catJson) ? catJson : (catJson?.data || []))
@@ -40,14 +40,14 @@ export default function ProviderDetail({ providerId, onBack }: ProviderDetailPro
             try {
               const mid = conn.id || conn.connection_id || conn.id
               if (mid) {
-                const mRes = await fetch(`${API_BASE || (window as any).__API_BASE__ || ''}/v1/providers/${mid}/models`)
+                const mRes = await fetch(`${API_BASE || (window as any).__API_BASE__ || ''}/providers/${mid}/models`)
                 mJson = mRes.ok ? await mRes.json() : { data: [] }
               }
             } catch (e) {
               // ignore and try provider-level models for OpenAI
               if (providerId === 'openai') {
                 try {
-                  const mRes = await fetch(`${API_BASE || (window as any).__API_BASE__ || ''}/v1/providers/${providerId}/models`)
+                  const mRes = await fetch(`${API_BASE || (window as any).__API_BASE__ || ''}/providers/${providerId}/models`)
                   mJson = mRes.ok ? await mRes.json() : { data: [] }
                 } catch {}
               }
@@ -58,7 +58,7 @@ export default function ProviderDetail({ providerId, onBack }: ProviderDetailPro
             try {
               const connId = conn.id || conn.connection_id || conn.id
               if (connId) {
-                const uRes = await fetch(`${API_BASE || (window as any).__API_BASE__ || ''}/v1/providers/${connId}/usage?source=${source}`)
+                const uRes = await fetch(`${API_BASE || (window as any).__API_BASE__ || ''}/providers/${connId}/usage?source=${source}`)
                 uJson = uRes.ok ? await uRes.json() : {}
               }
             } catch (e) {
@@ -234,12 +234,12 @@ export default function ProviderDetail({ providerId, onBack }: ProviderDetailPro
         onClose={() => setShowConnectionModal(false)}
         provider={{ id: providerMeta.id, name: providerMeta.name, description: `Track your ${providerMeta.name} usage and costs`, logo: providerMeta.logo, category: 'ai' }}
         onConnect={async (method, credentials) => {
-          const res = await apiPost(`/v1/providers/${providerMeta.id}/connect`, { provider_id: providerMeta.id, method, credentials })
+          const res = await apiPost(`/providers/${providerMeta.id}/connect`, { provider_id: providerMeta.id, method, credentials })
           if (res.status >= 200 && res.status < 300) {
             setShowConnectionModal(false)
             // refresh connections
             try {
-              const conRes = await fetch(`${API_BASE || (window as any).__API_BASE__ || ''}/v1/providers/connections`)
+              const conRes = await fetch(`${API_BASE || (window as any).__API_BASE__ || ''}/providers/connections`)
               const conJson = conRes.ok ? await conRes.json() : { data: [] }
               setConnections(Array.isArray(conJson) ? conJson : (conJson?.data || []))
             } catch {}
@@ -416,7 +416,7 @@ export default function ProviderDetail({ providerId, onBack }: ProviderDetailPro
               className="px-3 py-1 text-sm bg-gray-900 text-white rounded-md hover:bg-gray-800"
               onClick={async () => {
                 try {
-                  const mRes = await fetch(`${API_BASE || (window as any).__API_BASE__ || ''}/v1/providers/${providerId}/models`)
+                  const mRes = await fetch(`${API_BASE || (window as any).__API_BASE__ || ''}/providers/${providerId}/models`)
                   const mJson = mRes.ok ? await mRes.json() : { data: [] }
                   setModels(mJson?.data || [])
                 } catch {}

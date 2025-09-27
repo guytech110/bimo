@@ -64,7 +64,7 @@ export default function ProvidersIndex({ onProviderSelect }: ProvidersIndexProps
         // fetch catalog of supported providers
         let catalog: any[] = []
         try {
-          const catalogRes = await fetch(`${base}/v1/providers/catalog`)
+          const catalogRes = await fetch(`${base}/providers/catalog`)
           if (catalogRes.ok) {
             const catalogJson = await catalogRes.json()
             catalog = Array.isArray(catalogJson) ? catalogJson : (catalogJson?.data || [])
@@ -81,7 +81,7 @@ export default function ProvidersIndex({ onProviderSelect }: ProvidersIndexProps
         // fetch existing connections
         let connections: any[] = []
         try {
-          const conRes = await fetch(`${base}/v1/providers/connections`)
+          const conRes = await fetch(`${base}/providers/connections`)
           if (conRes.ok) {
             const conJson = await conRes.json()
             connections = Array.isArray(conJson) ? conJson : (conJson.data || [])
@@ -177,7 +177,7 @@ export default function ProvidersIndex({ onProviderSelect }: ProvidersIndexProps
     if (!selectedProvider) return;
 
     try {
-      const res = await apiPost(`/v1/providers/${selectedProvider.id}/connect`, { 
+      const res = await apiPost(`/providers/${selectedProvider.id}/connect`, { 
         provider_id: selectedProvider.id, 
         method, 
         credentials 

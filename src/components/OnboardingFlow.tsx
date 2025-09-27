@@ -100,7 +100,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     if (!selectedProvider) return;
 
     try {
-      const res = await apiPost(`/v1/providers/${selectedProvider.id}/connect`, {
+      const res = await apiPost(`/providers/${selectedProvider.id}/connect`, {
         provider_id: selectedProvider.id,
         method,
         credentials,
