@@ -31,7 +31,8 @@ jobs:
           npm run build
           # ensure destination exists before copying
           mkdir -p ../../dist/cli
-          cp -R dist ../../dist/cli
+          # copy package contents, not the folder, so package.json sits at dist/cli/package.json
+          cp -R dist/* ../../dist/cli/
 
       - name: Patch dist/cli package.json
         run: node scripts/patch_dist_cli_package.cjs || true
