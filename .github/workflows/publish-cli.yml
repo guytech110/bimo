@@ -13,6 +13,7 @@ jobs:
       packages: write
     env:
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -37,6 +38,9 @@ jobs:
 
       - name: Publish to npm
         run: |
+          # Configure npm auth explicitly and verify identity before publishing
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          npm whoami || (echo "npm auth failed" && exit 1)
           cd dist/cli
           npm publish --access public
 
