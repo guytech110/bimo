@@ -1,0 +1,14 @@
+{
+  "info": {"name": "bimo API", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"},
+  "item": [
+    {"name":"Device Start","request":{"method":"POST","header":[],"url":{"raw":"{{gateway}}/cli/device/start","host":["{{gateway}}"],"path":["cli","device","start"]}}},
+    {"name":"Device Poll","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"device_code\": \"{{device_code}}\"\n}"},"url":{"raw":"{{gateway}}/cli/device/poll","host":["{{gateway}}"],"path":["cli","device","poll"]}}},
+    {"name":"Auth Login","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"},"url":{"raw":"{{gateway}}/auth/login","host":["{{gateway}}"],"path":["auth","login"]}}},
+    {"name":"Connect Gemini (SA)","request":{"method":"POST","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"provider_id\": \"gemini\",\n  \"method\": \"oauth\",\n  \"credentials\": {\n    \"service_account_json\": {{service_account_json}},\n    \"project_id\": \"{{project_id}}\",\n    \"billing_account_id\": \"{{billing_account_id}}\",\n    \"bigquery_dataset_id\": \"{{bigquery_dataset_id}}\"\n  },\n  \"connection_type\": \"developer\",\n  \"connection_source\": \"postman\"\n}"},"url":{"raw":"{{gateway}}/providers/gemini/connect","host":["{{gateway}}"],"path":["providers","gemini","connect"]}}},
+    {"name":"Connections","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{token}}"}],"url":{"raw":"{{gateway}}/providers/connections","host":["{{gateway}}"],"path":["providers","connections"]}}},
+    {"name":"Usage","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{token}}"}],"url":{"raw":"{{gateway}}/providers/{{connection_id}}/usage?days=30","host":["{{gateway}}"],"path":["providers","{{connection_id}}","usage"],"query":[{"key":"days","value":"30"}]}}}
+  ],
+  "variable":[{"key":"gateway","value":"https://bimo-backend.onrender.com/v1"}]
+}
+
+
