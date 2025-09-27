@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "description": "bimo CLI",
+  "homepage": "https://github.com/guytech110/bimo",
+  "license": "MIT",
+  "architecture": {
+    "64bit": {
+      "url": "https://registry.npmjs.org/bimo-cli/-/bimo-cli-1.0.0.tgz",
+      "hash": "SKIP"
+    }
+  },
+  "bin": [
+    "bimo"
+  ],
+  "pre_install": [
+    "Write-Host \"Installing via npm...\"",
+    "npm install -g bimo-cli"
+  ]
+}
+
+

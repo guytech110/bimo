@@ -1,0 +1,75 @@
+name: Publish to Package Managers
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  publish-homebrew:
+    runs-on: ubuntu-latest
+    if: github.repository == 'guytech110/bimo'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Update Homebrew formula
+        run: |
+          # Update version in formula
+          sed -i "s/bimo-cli-[0-9.]*\.tgz/bimo-cli-${{ steps.version.outputs.VERSION }}.tgz/" scripts/brew/bimo-cli.rb
+          
+          # Get SHA256 hash from npm registry
+          SHA256=$(curl -s "https://registry.npmjs.org/bimo-cli/${{ steps.version.outputs.VERSION }}" | jq -r '.dist.shasum')
+          sed -i "s/sha256 \"SKIP\"/sha256 \"$SHA256\"/" scripts/brew/bimo-cli.rb
+
+      - name: Setup Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create Homebrew tap PR
+        run: |
+          # This would create a PR to the homebrew tap repository
+          # For now, we'll just commit the updated formula
+          git add scripts/brew/bimo-cli.rb
+          git commit -m "Update bimo-cli to ${{ steps.version.outputs.VERSION }}" || exit 0
+          git push origin main || exit 0
+
+  publish-scoop:
+    runs-on: ubuntu-latest
+    if: github.repository == 'guytech110/bimo'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Update Scoop manifest
+        run: |
+          # Update version in manifest
+          sed -i "s/\"version\": \"[0-9.]*\"/\"version\": \"${{ steps.version.outputs.VERSION }}\"/" scripts/scoop/bimo-cli.json
+          sed -i "s/bimo-cli-[0-9.]*\.tgz/bimo-cli-${{ steps.version.outputs.VERSION }}.tgz/" scripts/scoop/bimo-cli.json
+
+      - name: Setup Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create Scoop manifest PR
+        run: |
+          # This would create a PR to the scoop bucket repository
+          # For now, we'll just commit the updated manifest
+          git add scripts/scoop/bimo-cli.json
+          git commit -m "Update bimo-cli to ${{ steps.version.outputs.VERSION }}" || exit 0
+          git push origin main || exit 0
