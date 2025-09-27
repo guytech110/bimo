@@ -25,6 +25,18 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
+# Safety: some deployment UIs accidentally include the env var name in the value
+# (e.g. "DASHBOARD_URL=https://..."), sanitize by removing a possible
+# leading "DASHBOARD_URL=" and trimming whitespace so redirects work.
+try:
+    if isinstance(settings.DASHBOARD_URL, str) and settings.DASHBOARD_URL.startswith("DASHBOARD_URL="):
+        settings.DASHBOARD_URL = settings.DASHBOARD_URL.split("=", 1)[1].strip()
+    # also trim accidental surrounding whitespace
+    if isinstance(settings.DASHBOARD_URL, str):
+        settings.DASHBOARD_URL = settings.DASHBOARD_URL.strip()
+except Exception:
+    pass
+
 # Helper: parse CORS origins into list for FastAPI
 def get_cors_origins() -> List[str]:
     raw = settings.CORS_ORIGINS
